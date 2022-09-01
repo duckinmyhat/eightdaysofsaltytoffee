@@ -23,7 +23,7 @@ public class App extends JPanel{
     private String location; // menu, game, etc
     private int menubuttoncooldown;
     private world[] availableWorlds;
-    private world activeWorld;
+    public world activeWorld;
     private player p1;
     private double camerax, cameray;
     private double camerazoom;
@@ -116,9 +116,13 @@ public class App extends JPanel{
         a = new App();
         a.frame = a.createWindow();
         a.frame.add(a);
+        // enter game
+        a.location = "main_menu";
 
+        a.setSize(800, 800);
         a.frame.setResizable(true);
         a.WIDTH = a.getWidth(); a.HEIGHT = a.getHeight();
+        System.out.println("width: " + a.WIDTH + " height: " + a.HEIGHT);
 
         a.mouseDownLeft = false;
         a.mouseDownRight = false;
@@ -151,6 +155,7 @@ public class App extends JPanel{
          a.fileWitch = new JSONer();
          a.fileBarbarian = new ObjectSerializer();
          a.painter = new framePainter();
+         a.painter.initPainter();
          a.painter.loadTextures();
          a.items = new item();
 
@@ -161,8 +166,6 @@ public class App extends JPanel{
         // gather available worlds from folder !!!!!!!!!
         a.getAvailableWorlds();
 
-        // enter game
-        a.location = "main_menu";
 
         a.gamestepcooldown = 0;
         a.gameLongCoolDown = 0;
@@ -296,8 +299,9 @@ public class App extends JPanel{
         return newWorld;
     }
     public void getAvailableWorlds() {
+        File[] allWorlds = new File[] {};
         File worldsFolder = new File("./eightdays/gameData/worlds");
-        File[] allWorlds = worldsFolder.listFiles();
+        if(worldsFolder.listFiles() != null) {allWorlds = worldsFolder.listFiles();}
         System.out.println(allWorlds.length);
         availableWorlds = new world[allWorlds.length];
         for(int x = 0; x < allWorlds.length; x++) {
@@ -415,7 +419,7 @@ public class App extends JPanel{
         }
         if(longcooldown <= 0) {
             if(howManyMovingThings < 150) {spawnCreatureNaturally();}
-            gameLongCoolDown = 22;
+            gameLongCoolDown = 1000;
         }
     }
     public void playerPhysicsStep() { // player physics
@@ -757,6 +761,19 @@ public class App extends JPanel{
                             }
                         }
                         if(movingThingOnGround(t)) {
+                            t = mergeItems(t);
+                        }
+                    } else {
+                        t = movingThingBehavior(t,r);
+                    }
+                }
+                // damage things
+                if(t.reload>0) {t.reload--;} else {t.squish = false;}
+            }
+        }
+    }
+
+    public movingThing mergeItems(movingThing t) {
                         // ----------------------------------------------------------------------------------------------------------------------------------------------
 
                         // below: merge with items of same type to create larger item
@@ -808,16 +825,9 @@ public class App extends JPanel{
                         }
 
                         // ----------------------------------------------------------------------------------------------------------------------------------------------
-                    }
-                    } else {
-                        t = movingThingBehavior(t,r);
-                    }
-                }
-                // damage things
-                if(t.reload>0) {t.reload--;} else {t.squish = false;}
-            }
-        }
+                        return t;
     }
+
     public boolean isPerfectSquare(int input) {
         return (input== Math.pow((int)Math.sqrt(input),2));
     }
@@ -975,7 +985,7 @@ public class App extends JPanel{
                 noselegs.x = x; noselegs.y = y-100;
                 noselegs.size = 31;
                 noselegs.name = "noselegs";
-                noselegs.health = 4100;
+                noselegs.health = 1800;
                 noselegs.maxhealth = 4100;
                 noselegs.type = "enemy";
                 noselegs.reloadSet = 10;
@@ -1046,9 +1056,9 @@ public class App extends JPanel{
     public void spawnCreatureNaturally() {
         System.out.println("spawning");
         Random r = new Random();
-        for(int sx = p1.simplex-renderDistance; sx<p1.simplex+renderDistance; sx+= r.nextInt(2,20)) {
-            for(int sy = p1.simpley-renderDistance; sy<p1.simpley+renderDistance; sy+= 2) {
-                if(distance(sx,sy,p1.x,p1.y)>60 && !activeWorld.GAMEFIELD.isAir(sx,sy) && openAreaForWholeBody(sx,sy-5,3,3)) {
+        for(int sx = p1.simplex-renderDistance; sx<p1.simplex+renderDistance; sx+= r.nextInt(10,40)) {
+            for(int sy = p1.simpley-renderDistance; sy<p1.simpley+renderDistance; sy+= 1) {
+                if(distance(sx,sy,p1.x,p1.y)>60 && !openArea(sx,sy) && openAreaForWholeBody(sx,sy-5,3,3)) {
                     System.out.println(sx + " , " + sy + " spawn");
                     createNewMovingThing(sx,sy);
                 }

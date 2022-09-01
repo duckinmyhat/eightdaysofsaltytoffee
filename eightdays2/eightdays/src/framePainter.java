@@ -8,6 +8,7 @@ import java.util.*;
 import java.awt.image.ImageObserver;
 import java.awt.Font;
 import java.awt.Point;
+import  java.awt.geom.AffineTransform;
 
 public class framePainter implements ImageObserver{
     
@@ -17,6 +18,13 @@ public class framePainter implements ImageObserver{
     player p1;
     BufferedImage textures;
     BufferedImage bgimage;
+    BufferedImage currentGameFrame;
+    BufferedImage minimapFrame;
+    Graphics2D mmfg;
+    Graphics2D gfg;
+    int minimapscale;
+    int minimapSideLength;
+    int minimapBlockStep;
 
     @Override
     public boolean imageUpdate(Image arg0, int arg1, int arg2, int arg3, int arg4, int arg5) {
@@ -40,13 +48,26 @@ public class framePainter implements ImageObserver{
         return Math.sqrt(Math.pow(x-xx,2)+Math.pow(y-yy,2));
     }
 
-    public BufferedImage getCurrentGameFrame(int WIDTH, int HEIGHT, Point mouseP, double camerax, double cameray, double camerazoom, item[] inventory, int selectedItem, List<movingThing> movingThings, List<stationaryThing> stationaryThings) {
-        BufferedImage currentGameFrame = new BufferedImage(WIDTH,HEIGHT,BufferedImage.TYPE_INT_BGR); // TYPE_BYTE_BINARY means black and white. ,, TYPE_BYTE_INDEXED means retro
-        Graphics2D gfg = currentGameFrame.createGraphics(); // game frame graphics = gfg
+    public void initPainter() {
+        currentGameFrame = new BufferedImage(WIDTH,HEIGHT,BufferedImage.TYPE_INT_BGR); // TYPE_BYTE_BINARY means black and white. ,, TYPE_BYTE_INDEXED means retro
+        minimapFrame = new BufferedImage(100,100,BufferedImage.TYPE_INT_ARGB);
+        mmfg = minimapFrame.createGraphics();
+        gfg = currentGameFrame.createGraphics(); // game frame graphics = gfg
         gfg.setFont(new Font("purisa",Font.PLAIN,20));
+        minimapscale = 5;
+        minimapSideLength = 200;
+        minimapBlockStep = 200/(minimapSideLength/2);
+    }
+
+    public BufferedImage getCurrentGameFrame(int WIDTH, int HEIGHT, Point mouseP, double camerax, double cameray, double camerazoom, item[] inventory, int selectedItem, List<movingThing> movingThings, List<stationaryThing> stationaryThings) {
+        currentGameFrame = new BufferedImage(WIDTH,HEIGHT,BufferedImage.TYPE_INT_BGR); // TYPE_BYTE_BINARY means black and white. ,, TYPE_BYTE_INDEXED means retro
+        gfg = currentGameFrame.createGraphics();
+        minimapFrame = new BufferedImage(100,100,BufferedImage.TYPE_INT_ARGB);
+        mmfg = minimapFrame.createGraphics();
         //gfg.setColor(Color.decode("#DDEFEF"));
         //gfg.fillRect(0,0,WIDTH,HEIGHT);//gfg.drawImage(bgimage,0,0,WIDTH,HEIGHT,this); // BACKGROUND
         /// draw bg according to surrounding blocks
+        int halfWidth = (WIDTH/2); int halfHeight = (HEIGHT/2);
         int bgw = 20;
         int bgh = (int)(bgw*((float)HEIGHT/(float)WIDTH));
         for(int bgx = p1.simplex-(bgw/2); bgx < p1.simplex+(bgw/2); bgx++) {
@@ -55,10 +76,11 @@ public class framePainter implements ImageObserver{
                 // draw the color from this block relative to player in that section of the screen relative to the middle of the screen.
                 block bgb = activeWorld.getBlock(bgx,bgy);
                 if(bgb.type.equals("air")) {gfg.setColor(Color.decode("#A5AED2"));} else {gfg.setColor(desaturate(Color.decode(getColorForBlock(bgb.type)).brighter()));}
-                gfg.fillRect((WIDTH/2)+(((bgx-p1.simplex)*(WIDTH/bgw))),(HEIGHT/2)+(((bgy-p1.simpley)*(HEIGHT/bgh))),WIDTH/bgw,HEIGHT/bgh);
+                gfg.fillRect(halfWidth+(((bgx-p1.simplex)*(WIDTH/bgw))),halfHeight+(((bgy-p1.simpley)*(HEIGHT/bgh))),WIDTH/bgw,HEIGHT/bgh);
                 //System.out.println((WIDTH/2)+(((bgx-p1.simplex)*(WIDTH/20))));
             }
         }
+
         
         int leftrenderedge = (p1.simplex-renderDistance); if(leftrenderedge < 0) {leftrenderedge=0;}
         int rightrenderedge = (p1.simplex+renderDistance); if(rightrenderedge >= activeWorld.width) {rightrenderedge=activeWorld.width-1;}
@@ -78,7 +100,19 @@ public class framePainter implements ImageObserver{
                         gfg.setColor(darkenABit(Color.decode(getColorForBlock(activeWorld.GAMEFIELD.blockArray[x][y].type))));
                     //}
                     //if(shaded(x,y,activeWorld.GAMEFIELD.blockArray)) {gfg.setColor(Color.decode(getColorForBlock(activeWorld.GAMEFIELD.blockArray[x][y].type)).darker());}
-                    gfg.fillRect((WIDTH/2)-(int)((camerax-x)*camerazoom),(HEIGHT/2)-(int)((cameray-y)*camerazoom),1+(int)(camerazoom),1+(int)(camerazoom));}
+                    gfg.fillRect(halfWidth-(int)((camerax-x)*camerazoom),halfHeight-(int)((cameray-y)*camerazoom),1+(int)(camerazoom),1+(int)(camerazoom));
+                }
+            }
+        }
+        //mmfg.fillRect(0,0,minimapSideLength*2,minimapSideLength*2);
+        for(int x = -minimapSideLength; x < minimapSideLength; x+= 1) {
+            for(int y = -minimapSideLength; y < minimapSideLength; y+= 1) {
+                if(p1.simplex+x > activeWorld.width || p1.simplex+x < 0 || p1.simpley+y < 0 || p1.simpley+y > activeWorld.height || activeWorld.GAMEFIELD.isAir(p1.simplex+x,p1.simpley+y)) {
+                    mmfg.setColor(new Color(0,0,0,0));
+                } else {
+                    mmfg.setColor(Color.decode(getColorForBlock(activeWorld.GAMEFIELD.blockArray[p1.simplex+x][p1.simpley+y].type)));
+                }
+                mmfg.fillRect(100+x,100+y,1,1);
             }
         }
 
@@ -90,27 +124,28 @@ public class framePainter implements ImageObserver{
             //System.out.println(movingThings.get(i).name);
             movingThing t = movingThings.get(i);
             if(onScreen(t.simplex,t.simpley,camerax,cameray,camerazoom)) {
+                int[] tScreenCoords = new int[] {halfWidth-(int)((camerax-t.x)*camerazoom),halfHeight-(int)((cameray-t.y)*camerazoom)};
                 //gfg.setColor(Color.GREEN);
                 //gfg.drawString(Math.pow(t.size,2)+" " + t.name,(WIDTH/2)-(int)((camerax-t.x)*camerazoom),(HEIGHT/2)-(int)((cameray-t.y)*camerazoom));
                 if(!t.type.equals("droppeditem") && !t.type.equals("particle")) {
                     double squishc = 1; if(t.squish) {squishc = 0.6;} // change size of thing if it is being squished.
-                    gfg.drawImage(getImage(t.name),(WIDTH/2)-(int)((camerax-t.x)*camerazoom),(HEIGHT/2)-(int)((cameray-t.y)*camerazoom),1+(int)(t.w*t.size*camerazoom),(int)(1+(int)(t.h*t.size*camerazoom)*squishc),this);
+                    gfg.drawImage(getImage(t.name),tScreenCoords[0],tScreenCoords[1],1+(int)(t.w*t.size*camerazoom),(int)(1+(int)(t.h*t.size*camerazoom)*squishc),this);
                     // draw healthbar
                     gfg.setColor(Color.BLACK);
-                    gfg.fillRect((WIDTH/2)-(int)((camerax-t.x)*camerazoom),(HEIGHT/2)-(int)((cameray-t.y)*camerazoom)-20,1+(int)(t.w*t.size*camerazoom),10);
+                    gfg.fillRect(tScreenCoords[0],tScreenCoords[1]-20,1+(int)(t.w*t.size*camerazoom),10);
                     gfg.setColor(Color.decode("#FF4343"));
-                    gfg.fillRect((WIDTH/2)-(int)((camerax-t.x)*camerazoom),(HEIGHT/2)-(int)((cameray-t.y)*camerazoom)-20,(int)((t.health/t.maxhealth)*(1+(int)(t.w*t.size*camerazoom))),10);
+                    gfg.fillRect(tScreenCoords[0],tScreenCoords[1]-20,(int)((t.health/t.maxhealth)*(1+(int)(t.w*t.size*camerazoom))),10);
                 } else if(t.type.equals("particle")) {
                     gfg.setColor(Color.decode(t.name));
-                    gfg.fillRect((WIDTH/2)-(int)((camerax-t.x)*camerazoom),(HEIGHT/2)-(int)((cameray-t.y)*camerazoom),1+(int)(t.w*t.size*camerazoom),1+(int)(t.h*t.size*camerazoom));
+                    gfg.fillRect(tScreenCoords[0],tScreenCoords[1],1+(int)(t.w*t.size*camerazoom),1+(int)(t.h*t.size*camerazoom));
                 } else {
                     if(t.isBlock) {
                         Color bcolor = Color.decode(getColorForBlock(t.name)).darker().darker();
                         gfg.setColor(new Color(bcolor.getRed(),bcolor.getBlue(),bcolor.getGreen(),211));
                         //System.out.println("block item: " + t.w + " " + t.h + " " + t.size);
-                        gfg.fillRect((WIDTH/2)-(int)((camerax-t.x)*camerazoom),(HEIGHT/2)-(int)((cameray-t.y)*camerazoom),1+(int)(t.w*t.size*camerazoom),1+(int)(t.h*t.size*camerazoom));
+                        gfg.fillRect(tScreenCoords[0],tScreenCoords[1],1+(int)(t.w*t.size*camerazoom),1+(int)(t.h*t.size*camerazoom));
                     } else {
-                        gfg.drawImage(getImage(t.name),(WIDTH/2)-(int)((camerax-t.x)*camerazoom),(HEIGHT/2)-(int)((cameray-t.y)*camerazoom),1+(int)(t.w*t.size*camerazoom),1+(int)(t.h*t.size*camerazoom),this);
+                        gfg.drawImage(getImage(t.name),tScreenCoords[0],tScreenCoords[1],1+(int)(t.w*t.size*camerazoom),1+(int)(t.h*t.size*camerazoom),this);
                     }
                 }
             }
@@ -120,30 +155,30 @@ public class framePainter implements ImageObserver{
 
 
         // inventory drawing
-        gfg.drawImage(getImage("inventory"),(WIDTH/2)-360,HEIGHT-(10+(15*5)),90*5,16*5,this);
-        gfg.drawImage(getImage("inventory"),(WIDTH/2)+90,HEIGHT-(10+(15*5)),90*5,16*5,this);
-        gfg.drawImage(getImage("selectedItemFrame"),(WIDTH/2)-360+(selectedItem*15*5),HEIGHT-(10+(15*5)),16*5,16*5,this);
+        gfg.drawImage(getImage("inventory"),halfWidth-360,HEIGHT-(10+(15*5)),90*5,16*5,this);
+        gfg.drawImage(getImage("inventory"),halfWidth+90,HEIGHT-(10+(15*5)),90*5,16*5,this);
+        gfg.drawImage(getImage("selectedItemFrame"),halfWidth-360+(selectedItem*15*5),HEIGHT-(10+(15*5)),16*5,16*5,this);
         gfg.setColor(Color.BLACK);
-        if(p1.inventory[p1.selectedItem]!=null) {gfg.drawString(p1.inventory[p1.selectedItem].name,(WIDTH/2)-360+(selectedItem*15*5),HEIGHT-(10+(15*5))-42);}
+        if(p1.inventory[p1.selectedItem]!=null) {gfg.drawString(p1.inventory[p1.selectedItem].name,halfWidth-360+(selectedItem*15*5),HEIGHT-(10+(15*5))-42);}
         // player healthbar
         gfg.setColor(Color.BLACK);
-        gfg.fillRect((WIDTH/2)-360,HEIGHT-(10+(15*5))-32,180*5,30);
+        gfg.fillRect(halfWidth-360,HEIGHT-(10+(15*5))-32,180*5,30);
         gfg.setColor(Color.RED);
-        gfg.fillRect((WIDTH/2)-360,HEIGHT-(10+(15*5))-32,(int)(180*5*p1.health/p1.maxhealth),30);
+        gfg.fillRect(halfWidth-360,HEIGHT-(10+(15*5))-32,(int)(180*5*p1.health/p1.maxhealth),30);
         for(int i = 0; i < inventory.length; i++) {
             if(inventory[i]!=null) { // drawing items
                 //if(inventory[i].type==null) {System.out.println("i: " + i + " name " + inventory[i].name);}
                 if(inventory[i].type.equals("block")) {
                     gfg.setColor(Color.decode(getColorForBlock(inventory[i].name)).darker());
-                    gfg.fillRect((WIDTH/2)-357+(i*15*5),HEIGHT-(9+(15*5)),13*5,13*5);
+                    gfg.fillRect(halfWidth-357+(i*15*5),HEIGHT-(9+(15*5)),13*5,13*5);
                 } else {
-                    gfg.drawImage(getImage(inventory[i].name),(WIDTH/2)-357+(i*15*5),HEIGHT-(9+(15*5)),13*5,13*5,this);
+                    gfg.drawImage(getImage(inventory[i].name),halfWidth-357+(i*15*5),HEIGHT-(9+(15*5)),13*5,13*5,this);
                 }
                 // draw number for the quantity of the item
                 gfg.setColor(Color.RED);
                 
                 gfg.setFont(new Font("purisa",Font.PLAIN,30));
-                gfg.drawString(inventory[i].quantity+"",(WIDTH/2)-357+(i*15*5),30+HEIGHT-(9+(15*5)));
+                gfg.drawString(inventory[i].quantity+"",halfWidth-357+(i*15*5),30+HEIGHT-(9+(15*5)));
             }   else {
                 
             }
@@ -165,41 +200,41 @@ public class framePainter implements ImageObserver{
         for(int i = 0; i < sta; i++) {
             stationaryThing s = stationaryThings.get(i);
             if(onScreen(s.x,s.y,camerax,cameray,camerazoom)) {
-                gfg.drawImage(getImage(s.name),(WIDTH/2)-(int)((camerax-s.x)*camerazoom),(HEIGHT/2)-(int)((cameray-s.y)*camerazoom),1+(int)(s.w*s.size*camerazoom),1+(int)(s.h*s.size*camerazoom),this);
+                gfg.drawImage(getImage(s.name),halfWidth-(int)((camerax-s.x)*camerazoom),halfHeight-(int)((cameray-s.y)*camerazoom),1+(int)(s.w*s.size*camerazoom),1+(int)(s.h*s.size*camerazoom),this);
             }
         }
         // draw player
-        gfg.drawImage(getImage("player"),((WIDTH/2)-(int)((camerax-p1.x)*camerazoom)),(HEIGHT/2)-(int)((cameray-p1.y)*camerazoom),(int)(p1.width*p1.size*camerazoom),(int)(p1.height*p1.size*camerazoom),this);
+        gfg.drawImage(getImage("player"),(halfWidth-(int)((camerax-p1.x)*camerazoom)),halfHeight-(int)((cameray-p1.y)*camerazoom),(int)(p1.width*p1.size*camerazoom),(int)(p1.height*p1.size*camerazoom),this);
 
         // draw chest menu if needed
         int chestadj = -130; // chest adjust
         if(p1.inChest) {
-            gfg.drawImage(getImage("inventory"),(WIDTH/2)+chestadj,(HEIGHT/2)-20,90*5,16*5,this);
-            gfg.drawImage(getImage("selectedItemFrame"),(WIDTH/2)+chestadj+(p1.chestSelectedItem*15*5),(HEIGHT/2)-20,16*5,16*5,this);
+            gfg.drawImage(getImage("inventory"),halfWidth+chestadj,halfHeight-20,90*5,16*5,this);
+            gfg.drawImage(getImage("selectedItemFrame"),halfWidth+chestadj+(p1.chestSelectedItem*15*5),halfHeight-20,16*5,16*5,this);
             for(int i = 0; i < p1.chestInventory.length; i++) {
                 if(p1.chestInventory[i]!=null) { // drawing items
                     //if(inventory[i].type==null) {System.out.println("i: " + i + " name " + inventory[i].name);}
                     if(p1.chestInventory[i].type.equals("block")) {
                         gfg.setColor(Color.decode(getColorForBlock(p1.chestInventory[i].name)).darker());
-                        gfg.fillRect((WIDTH/2)+chestadj+(i*15*5),(HEIGHT/2)-20,13*5,13*5);
+                        gfg.fillRect(halfWidth+chestadj+(i*15*5),halfHeight-20,13*5,13*5);
                     } else {
-                        gfg.drawImage(getImage(p1.chestInventory[i].name),(WIDTH/2)+chestadj+(i*15*5),(HEIGHT/2)-20,13*5,13*5,this);
+                        gfg.drawImage(getImage(p1.chestInventory[i].name),halfWidth+chestadj+(i*15*5),halfHeight-20,13*5,13*5,this);
                     }
                     // draw number for the quantity of the item
                     gfg.setColor(Color.RED);
                     
                     gfg.setFont(new Font("purisa",Font.PLAIN,30));
-                    gfg.drawString(p1.chestInventory[i].quantity+"",(WIDTH/2)+chestadj+(i*15*5),(HEIGHT/2)-20);
+                    gfg.drawString(p1.chestInventory[i].quantity+"",halfWidth+chestadj+(i*15*5),halfHeight-20);
                 }   else {
                     
                 }
             }
             gfg.setColor(Color.BLACK);
-            gfg.drawString("chest || 'e' to exit, 'l shift' to switch mode, 'w' to move items, scroll to select",(WIDTH/2)+(2*chestadj),(HEIGHT/2)-61);
+            gfg.drawString("chest || 'e' to exit, 'l shift' to switch mode, 'w' to move items, scroll to select",halfWidth+(2*chestadj),halfHeight-61);
             if(p1.depositing) {
-                gfg.drawString("mode: deposit",(WIDTH/2)+chestadj,(HEIGHT/2)-41);
+                gfg.drawString("mode: deposit",halfWidth+chestadj,halfHeight-41);
             } else {
-                gfg.drawString("mode: withdraw",(WIDTH/2)+chestadj,(HEIGHT/2)-41);
+                gfg.drawString("mode: withdraw",halfWidth+chestadj,halfHeight-41);
             }
         }
 
@@ -208,11 +243,17 @@ public class framePainter implements ImageObserver{
         
         // draw item use animation
         if(p1.inventory[p1.selectedItem]!=null) {
-            gfg.rotate(Math.atan2((mouseP.y-(HEIGHT/2)-(int)(((cameray-p1.y)+((p1.height*p1.size/2)))*camerazoom)),(mouseP.x-(((WIDTH/2)+(int)(((camerax-p1.x)+((p1.width*p1.size/2)))*camerazoom)))))+Math.toRadians(90),((WIDTH/2)+(int)(((camerax-p1.x)+((p1.width*p1.size/2)))*camerazoom)),(HEIGHT/2)+(int)(((cameray-p1.y)+((p1.height*p1.size/2)))*camerazoom));
-            gfg.drawImage(getImage(p1.inventory[p1.selectedItem].name),(WIDTH/2),(HEIGHT/2)-33-(int)(p1.reloadMarker*10*camerazoom),(int)(4*camerazoom),18+(int)(p1.reloadMarker*10*camerazoom),this);
+            AffineTransform rota = gfg.getTransform();
+            gfg.rotate(Math.atan2((mouseP.y-halfHeight-(int)(((cameray-p1.y)+((p1.height*p1.size/2)))*camerazoom)),(mouseP.x-((halfWidth+(int)(((camerax-p1.x)+((p1.width*p1.size/2)))*camerazoom)))))+Math.toRadians(90),(halfWidth+(int)(((camerax-p1.x)+((p1.width*p1.size/2)))*camerazoom)),halfHeight+(int)(((cameray-p1.y)+((p1.height*p1.size/2)))*camerazoom));
+            
+            gfg.drawImage(getImage(p1.inventory[p1.selectedItem].name),halfWidth,halfHeight-33-(int)(p1.reloadMarker*10*camerazoom),(int)(4*camerazoom),18+(int)(p1.reloadMarker*10*camerazoom),this);
             gfg.rotate(-Math.toRadians(45));
-        }
 
+            gfg.setTransform(rota);
+        }
+        // draw minimap
+        gfg.drawImage(minimapFrame,WIDTH-(minimapSideLength*2),0,minimapSideLength*2,minimapSideLength*2,this);
+        //gfg.drawImage(minimapFrame,0,0,minimapSideLength*2,minimapSideLength*2,this);
         return currentGameFrame;
     }
 

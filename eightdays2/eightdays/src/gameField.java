@@ -20,7 +20,7 @@ public class gameField implements Serializable{
         treeDesigns = new File("./eightdays/images/treeDesigns.png");
         try{
         treeSet = ImageIO.read(treeDesigns);
-        } catch(Exception e) {System.out.println(e.getMessage());}
+        } catch(Exception e) {System.out.println("error reading GAMEFIELD file: " + e.getMessage());}
     }
 
     public void setBlock(int x, int y, String blockType) {
@@ -99,6 +99,10 @@ public class gameField implements Serializable{
             setBlock(x,gy,biomeGrass(cb));
             if(!cb.equals("sandy") && !cb.equals("craggy")) {for(int d = 1; d < 30; d++) {setBlock(x,gy+d,"dirt");}}
         }
+
+        makeTrees();
+
+        for(int x = 0; x < W; x++) {if(x%77==0) {setBlock(x,77,"firmamental_residue"); setBlock(x,H-77,"grapite"); setBlock(x,H-78,"subterranean_chunk");}}
 
         // main part of generation above
         // turn blocks into big chunky blocks
@@ -215,11 +219,14 @@ public class gameField implements Serializable{
         boolean notdone = true;
         while(notdone) {
             x += 1;
-            if(x >= W) {
+            if(x >= W) {x = 0; notdone = false;break;}
+            /*if(x >= W) {
                 x = 0; y+=1;
-            }
+            }*/
+            y = (H/2)-60;
+            while(isAir(x,y)) {y++;}
             boolean abort = false;
-            if(!isAir(x,y) || isAir(x,y+1)) {abort = true;}
+            //if(!isAir(x,y) || isAir(x,y+1)) {abort = true;}
             if(y >= H) {abort = true; notdone = false; break;}
             if(isWater(x,y+1) || getBlock(x,y+1).type.equals("leaves") || getBlock(x,y+1).type.equals("pink_leaves")) {abort = true;}
             cb = blockArray[x][y].biome;
