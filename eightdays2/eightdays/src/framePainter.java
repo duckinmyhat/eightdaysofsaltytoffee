@@ -62,8 +62,8 @@ public class framePainter implements ImageObserver{
     public BufferedImage getCurrentGameFrame(int WIDTH, int HEIGHT, Point mouseP, double camerax, double cameray, double camerazoom, item[] inventory, int selectedItem, List<movingThing> movingThings, List<stationaryThing> stationaryThings) {
         currentGameFrame = new BufferedImage(WIDTH,HEIGHT,BufferedImage.TYPE_INT_BGR); // TYPE_BYTE_BINARY means black and white. ,, TYPE_BYTE_INDEXED means retro
         gfg = currentGameFrame.createGraphics();
-        minimapFrame = new BufferedImage(100,100,BufferedImage.TYPE_INT_ARGB);
-        mmfg = minimapFrame.createGraphics();
+        //minimapFrame = new BufferedImage(100,100,BufferedImage.TYPE_INT_ARGB);
+        //mmfg = minimapFrame.createGraphics();
         //gfg.setColor(Color.decode("#DDEFEF"));
         //gfg.fillRect(0,0,WIDTH,HEIGHT);//gfg.drawImage(bgimage,0,0,WIDTH,HEIGHT,this); // BACKGROUND
         /// draw bg according to surrounding blocks
@@ -105,7 +105,7 @@ public class framePainter implements ImageObserver{
             }
         }
         //mmfg.fillRect(0,0,minimapSideLength*2,minimapSideLength*2);
-        for(int x = -minimapSideLength; x < minimapSideLength; x+= 1) {
+        /*for(int x = -minimapSideLength; x < minimapSideLength; x+= 1) {
             for(int y = -minimapSideLength; y < minimapSideLength; y+= 1) {
                 if(p1.simplex+x > activeWorld.width || p1.simplex+x < 0 || p1.simpley+y < 0 || p1.simpley+y > activeWorld.height || activeWorld.GAMEFIELD.isAir(p1.simplex+x,p1.simpley+y)) {
                     mmfg.setColor(new Color(0,0,0,0));
@@ -114,7 +114,7 @@ public class framePainter implements ImageObserver{
                 }
                 mmfg.fillRect(100+x,100+y,1,1);
             }
-        }
+        }*/
 
 
 
@@ -252,7 +252,7 @@ public class framePainter implements ImageObserver{
             gfg.setTransform(rota);
         }
         // draw minimap
-        gfg.drawImage(minimapFrame,WIDTH-(minimapSideLength*2),0,minimapSideLength*2,minimapSideLength*2,this);
+        //gfg.drawImage(minimapFrame,WIDTH-(minimapSideLength*2),0,minimapSideLength*2,minimapSideLength*2,this);
         //gfg.drawImage(minimapFrame,0,0,minimapSideLength*2,minimapSideLength*2,this);
         return currentGameFrame;
     }

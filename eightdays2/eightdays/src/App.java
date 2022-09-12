@@ -172,7 +172,7 @@ public class App extends JPanel{
         while(true) {
             // GAME LOOP
             a.WIDTH = a.getWidth(); a.HEIGHT = a.getHeight();
-            Thread.sleep(10);
+            Thread.sleep(11);
             if(0 == a.menubuttoncooldown) {a.handleKeys();}
             if(a.menubuttoncooldown > 0) {a.menubuttoncooldown -= 1;}
             if(a.location == "in_game") {
@@ -355,6 +355,8 @@ public class App extends JPanel{
             p1.x = spawnCoords[0]; p1.y = spawnCoords[1]-3;
             //while(!playerOnGround() && !(p1.y<2)) {p1.y+=1;}
             //while(playerOnGround()) {p1.y -= 1;}
+            stationaryThings = new ArrayList<stationaryThing>();
+            movingThings = new ArrayList<movingThing>();
             activeWorld.blocksSetup();
             
         }
@@ -986,7 +988,7 @@ public class App extends JPanel{
                 noselegs.size = 31;
                 noselegs.name = "noselegs";
                 noselegs.health = 1800;
-                noselegs.maxhealth = 4100;
+                noselegs.maxhealth = 1800;
                 noselegs.type = "enemy";
                 noselegs.reloadSet = 10;
                 noselegs.damage = 5;
