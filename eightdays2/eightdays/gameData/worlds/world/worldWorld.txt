@@ -92479,7 +92479,9 @@ world
 30 flat_stone
 18 pink_stone
 5 air
-21 pink_stone
+2 pink_stone
+4 pink_grass
+15 pink_stone
 288 flat_stone
 8 crag_stone
 2 dirt
@@ -92566,7 +92568,9 @@ world
 30 flat_stone
 21 pink_stone
 3 air
-20 pink_stone
+1 pink_stone
+4 pink_grass
+15 pink_stone
 288 flat_stone
 8 crag_stone
 2 dirt
@@ -92652,7 +92656,9 @@ world
 28 flat_stone
 20 pink_stone
 2 air
-10 pink_stone
+1 pink_stone
+4 pink_grass
+5 pink_stone
 300 flat_stone
 62 crag_stone
 38 pink_stone
